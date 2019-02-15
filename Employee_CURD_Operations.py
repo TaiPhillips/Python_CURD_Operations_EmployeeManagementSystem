@@ -93,6 +93,7 @@ def create_record():
     lastname = input('> ')
     print('Please enter the date of birth in DDMMYYYY format : ')
     dob = input('> ')
+    dob = age_validation(dob)
     print('Please enter the department name : ')
     department = input('> ')
 
@@ -122,6 +123,34 @@ def create_record():
         conn.close()
     return True
 
+
+def age_validation(dob):
+    """
+    Validation for dateOfBirth
+    Parameters:
+    dob: employee dateOfBirth
+    Returns:
+    dob: validated dateOfBirth
+    """
+    if not len(dob) == 8:
+        print('Enter DateOfBirth in DDMMYYYY format only : ')
+        dob = input('> ')
+        dob = age_validation(dob)
+    if not dob.isdigit():
+        print('Enter DateOfBirth in DDMMYYYY format only : ')
+        dob = input('> ')
+        dob = age_validation(dob)
+    else:
+        try:
+            if int(dob[4:]) <= 1994:
+                print('Age more then 25 years is not allowed !!!')
+                print('Re-enter DateOfBirth')
+                dob = input('> ')
+                dob = age_validation(dob)
+        except Exception as e:
+            print('error while validating dob !!!')
+            raise e
+    return dob
 
 def validate_user_input(user_input):
     """
