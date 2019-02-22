@@ -1,14 +1,33 @@
 import sqlite3
 import os
 import sys
+import datetime
+
+
+def welcome_message():
+    """
+    welcome message for the CURD operations
+    """
+    print(""" 
+
+     |-------------------------------------------------------------|
+     |=============================================================| 
+     |==== Hi Welcome to Employee Database management	System ======|
+     |=============================================================|
+     |-------------------------------------------------------------|
+     
+        """)
 
 
 def employee_curd_operation():
-    print('For Creating record ENTER : 1 ')
-    print('For Updating record ENTER : 2 ')
-    print('For Retrieving record ENTER : 3 ')
-    print('For Deleting record Enter : 4 ')
-    print('FOR EXIT ENTER : 5 ')
+    """
+    different employee and department CURD operations
+    """
+    print('Enter 1 : To Create Record ')
+    print('Enter 2 : To Update Record ')
+    print('Enter 3 : To Retrieve Record ')
+    print('Enter 4 : To Delete Record ')
+    print('Enter 5 : To EXIT ')
     choice = input("SELECT YOUR OPTION : ")
     choice = validate_user_input(choice)
     if choice == "1":
@@ -24,7 +43,14 @@ def employee_curd_operation():
     else:
         print('YOU HAVE ENTERED WRONG CHOICE. SELECT RIGHT OPTION !!!!')
         employee_curd_operation()
-    print('IF YOU WANT TO CONTINUE NEXT OPERATION ENTER 1 ELSE 2 :')
+    continue_operation()
+
+
+def continue_operation():
+    """
+    checks if user wants to proceed with other operations
+    """
+    print('\n IF YOU WANT TO CONTINUE NEXT OPERATION ENTER 1 ELSE 2 :')
     next_opr = input("> ")
     if next_opr == "1":
         employee_curd_operation()
@@ -32,17 +58,23 @@ def employee_curd_operation():
         sys.exit(0)
     else:
         print('You have entered wrong choice. Enter right choice')
-        employee_curd_operation()
+        continue_operation()
 
 
 def employee_update_operation():
-    print('For updating FIRSTNAME enter 1 : ')
-    print('For updating LASTNAME enter 2 : ')
-    print('For updating DOB enter 3 : ')
-    print('For updating DEPARTMENT enter 4 : ')
+    """
+    options for different update operations
+    """
+    print('Enter 1 : To update FIRSTNAME ')
+    print('Enter 2 : To update LASTNAME ')
+    print('Enter 3 : To update DOB ')
+    print('Enter 4 : To update DEPARTMENT ')
 
 
 def create_database_tables():
+    """
+    creation of database tables
+    """
     emp_table = '''
         CREATE TABLE IF NOT EXISTS employee(
         empid TEXT NOT NULL PRIMARY KEY, 
@@ -83,19 +115,17 @@ def create_database_tables():
 
 
 def create_record():
+    """
+    creates record in employee and department tables
+    """
     create_database_tables()
     print('Create operation started...........')
-    print('Please enter the employee id : ')
-    empid = input('> ')
-    print('Please enter the firstname : ')
-    firstname = input('> ')
-    print('Please enter the lastname : ')
-    lastname = input('> ')
-    print('Please enter the date of birth in DDMMYYYY format : ')
-    dob = input('> ')
+    empid = add_employee_id()
+    firstname = add_firstname()
+    lastname = add_lastname()
+    dob = add_dob()
     dob = age_validation(dob)
-    print('Please enter the department name : ')
-    department = input('> ')
+    department = add_department()
 
     department_query = '''
             INSERT INTO department (dept_name) VALUES (?)
@@ -105,16 +135,26 @@ def create_record():
             INSERT INTO employee (empid, firstname, lastname, dob, department) VALUES (?, ?, ?, ?, ?)
     '''
 
+    value_in_department_table = check_value_in_department_table(department)
     conn = sqlite3.connect('testdb.sqlite')
     try:
         cursor = conn.cursor()
-
-        cursor.execute(department_query, (department,))
-        print('created record in department table')
+        if value_in_department_table is False:
+            cursor.execute(department_query, (department,))
+            print('created record in department table')
 
         cursor.execute(employee_query, (empid, firstname, lastname, dob, department))
-        print('Successfully created record for employee with EmployeeID : {}'.format(empid))
         conn.commit()
+        print('Successfully created record for employee with EmployeeID : {}'.format(empid))
+        f = open("log.txt", "a+")
+        try:
+            currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+            f.write(currenttime+' : '+'Added new record with EmployeeID -> {}'.format(empid)+' \n')
+        except Exception as e:
+            print('error while updating into log file !!!')
+            raise e
+        finally:
+            f.close()
     except Exception as e:
         print('error while creating record in databases !!!')
         conn.rollback()
@@ -122,6 +162,102 @@ def create_record():
     finally:
         conn.close()
     return True
+
+
+def add_employee_id():
+    """
+    checks if employeeID already exists and if not adds
+    """
+    print('Enter EmployeeID : ')
+    empid = input('> ')
+    conn = sqlite3.connect('testdb.sqlite')
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT empid FROM employee WHERE empid = ?", (empid,))
+        data = cursor.fetchall()
+    except Exception as e:
+        print('error while checking emp id record from database !!!')
+        raise e
+    finally:
+        conn.close()
+    try:
+        if len(data) != 0:
+            print('OOPS.. entered EmployeeID is ALREADY EXISTS... Please re-enter :')
+            new_empid = add_employee_id()
+            return new_empid
+        else:
+            if empid in ("", None) or empid.isspace():
+                print('Invalid value for EmployeeID. Please re-enter valid value : ')
+                new_empid = add_employee_id()
+                return new_empid
+            else:
+                return empid
+    except Exception as e:
+        raise e
+
+
+def add_firstname():
+    """
+    checks valid firstname and returns it
+    Returns:
+    firstname : validated firstname
+    """
+    print('Enter Firstname : ')
+    firstname = input('> ')
+    if firstname in ("", None) or firstname.isspace():
+        print('Invalid value for Firstname. Please re-enter valid value : ')
+        new_firstname = add_firstname()
+        return new_firstname
+    else:
+        return firstname
+
+
+def add_lastname():
+    """
+    checks valid lastname and returns it
+    Returns:
+    lastname : validated lastname
+    """
+    print('Enter Lastname : ')
+    lastname = input('> ')
+    if lastname in ("", None) or lastname.isspace():
+        print('Invalid value for Lastname. Please re-enter valid value : ')
+        new_lastname = add_lastname()
+        return new_lastname
+    else:
+        return lastname
+
+
+def add_dob():
+    """
+    chacks valid date of birth and returns it
+    Returns:
+    dob : validated date of birth
+    """
+    print('Enter DateOfBirth : ')
+    dob = input('> ')
+    if dob in ("", None) or dob.isspace():
+        print('Invalid value for DateOfBirth. Please re-enter valid value : ')
+        new_dob = add_dob()
+        return new_dob
+    else:
+        return dob
+
+
+def add_department():
+    """
+    checks valid department name and returns it
+    Returns:
+    department : validated department name
+    """
+    print('Enter Department : ')
+    department = input('> ')
+    if department in ("", None) or department.isspace():
+        print("Invalid value for Department. Please re-enter valid value : ")
+        new_department = add_department()
+        return new_department
+    else:
+        return department
 
 
 def age_validation(dob):
@@ -142,8 +278,8 @@ def age_validation(dob):
         dob = age_validation(dob)
     else:
         try:
-            if int(dob[4:]) <= 1994:
-                print('Age more then 25 years is not allowed !!!')
+            if int(dob[4:]) >= 1994:
+                print('Age less than 25 years is not allowed !!!')
                 print('Re-enter DateOfBirth')
                 dob = input('> ')
                 dob = age_validation(dob)
@@ -151,6 +287,7 @@ def age_validation(dob):
             print('error while validating dob !!!')
             raise e
     return dob
+
 
 def validate_user_input(user_input):
     """
@@ -160,21 +297,24 @@ def validate_user_input(user_input):
     Returns:
     user_input : validated user input
     """
-    if user_input in ('1', '2', '3', '4'):
+    if user_input in ('1', '2', '3', '4', '5'):
         return user_input
     else:
-        next_input = int(input('Please re-enter valid input'))
+        next_input = input('Please re-enter valid input')
         validate_user_input(next_input)
         return next_input
 
 
 def update_record():
+    """
+    update record operation
+    """
     if not os.path.isfile('testdb.sqlite'):
         print('OOPS...There are no records to update. Please create records : ')
     else:
         print('Update operation started...........')
-        print('Please enter the employee id of the employee you want to update record : ')
-        empid = input('> ')
+        print('Need EmployeeID of the employee you want to update : ')
+        empid = add_employee_id()
         conn = sqlite3.connect('testdb.sqlite')
         try:
             cursor = conn.cursor()
@@ -221,12 +361,21 @@ def update_firstname(empid):
     empid: employeeID
     """
     conn = sqlite3.connect('testdb.sqlite')
-    print('Enter FIRSTNAME to be update : ')
+    print('Enter FIRSTNAME to update : ')
     entered_firstname = input('> ')
     try:
         cursor = conn.cursor()
         cursor.execute('''UPDATE employee SET firstname = ? WHERE empid = ? ''', (entered_firstname, empid))
         conn.commit()
+        f = open("log.txt", "a+")
+        try:
+            currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+            f.write(currenttime+' : '+'Updated FIRSTNAME for employee with EmployeeID -> {}'.format(empid)+' \n')
+        except Exception as e:
+            print('error while updating into log file !!!')
+            raise e
+        finally:
+            f.close()
     except Exception as e:
         print('error while updating FIRSTNAME !!!')
         conn.rollback()
@@ -241,11 +390,20 @@ def update_lastname(empid):
     empid: employeeID
     """
     conn = sqlite3.connect('testdb.sqlite')
-    entered_lastname = input('Enter LASTNAME to be update : ')
+    entered_lastname = input('Enter LASTNAME to update : ')
     try:
         cursor = conn.cursor()
         cursor.execute('''UPDATE employee SET lastname = ? WHERE empid = ? ''', (entered_lastname, empid))
         conn.commit()
+        f = open("log.txt", "a+")
+        try:
+            currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+            f.write(currenttime+' : '+'Updated LASTNAME for employee with EmployeeID -> {}'.format(empid)+' \n')
+        except Exception as e:
+            print('error while updating into log file !!!')
+            raise e
+        finally:
+            f.close()
     except Exception as e:
         print('error while updating LASTNAME !!!')
         conn.rollback()
@@ -260,12 +418,21 @@ def update_dob(empid):
     empid: employeeID
     """
     conn = sqlite3.connect('testdb.sqlite')
-    print('Enter DOB to be update : ')
+    print('Enter DOB to update : ')
     entered_dob = input('> ')
     try:
         cursor = conn.cursor()
         cursor.execute('''UPDATE employee SET dob = ? WHERE empid = ? ''', (entered_dob, empid))
         conn.commit()
+        f = open("log.txt", "a+")
+        try:
+            currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+            f.write(currenttime+' : '+'Updated DOB for employee with EmployeeID -> {}'.format(empid)+' \n')
+        except Exception as e:
+            print('error while updating into log file !!!')
+            raise e
+        finally:
+            f.close()
     except Exception as e:
         print('error while updating DOB !!!')
         conn.rollback()
@@ -280,13 +447,24 @@ def update_department(empid):
     empid: employeeID
     """
     conn = sqlite3.connect('testdb.sqlite')
-    print('Enter DEPARTMENT to be update : ')
+    print('Enter DEPARTMENT to update : ')
     entered_department = input('> ')
-
+    value_in_department_table = check_value_in_department_table(entered_department)
     try:
         cursor = conn.cursor()
         cursor.execute('''UPDATE employee SET department = ? WHERE empid = ? ''', (entered_department, empid))
+        if value_in_department_table is False:
+            cursor.execute('''INSERT INTO department (dept_name) VALUES (?) ''', (entered_department,))
         conn.commit()
+        f = open("log.txt", "a+")
+        try:
+            currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+            f.write(currenttime+' : '+'Updated DEPARTMENT for employee with EmployeeID -> {}'.format(empid)+' \n')
+        except Exception as e:
+            print('error while updating into log file !!!')
+            raise e
+        finally:
+            f.close()
     except Exception as e:
         print('error while updating DEPARTMENT !!!')
         conn.rollback()
@@ -295,42 +473,120 @@ def update_department(empid):
         conn.close()
 
 
+def check_value_in_department_table(entered_department):
+    """
+    checks department name exists in department table
+    Parameters:
+    entered_department: user entered department name
+    is_exists : True if exists else False
+    """
+    conn = sqlite3.connect('testdb.sqlite')
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT dept_name FROM department WHERE dept_name = ?", (entered_department,))
+        data = cursor.fetchall()
+    except Exception as e:
+        print('error while checking dept_name record from department table !!!')
+        raise e
+    finally:
+        conn.close()
+    try:
+        if len(data) == 0:
+            return False
+        else:
+            return True
+    except Exception as e:
+        raise e
+
+
 def retrieve_record():
+    """
+    retrieve record operation
+    """
     if not os.path.isfile('testdb.sqlite'):
         print('OOPS...There are no records to retrieve. Please create records : ')
     else:
         conn = sqlite3.connect('testdb.sqlite')
-        print('enter employeeID to be retrieved : ')
-        empid = input('> ')
-        try:
-            cursor = conn.cursor()
-            cursor.execute(''' SELECT * FROM employee WHERE empid = ?''', (empid,))
-            employee = cursor.fetchone()
-            if employee is None:
-                print('Record not found in the table for employee with EmployeeID : {}'.format(empid))
-            else:
-                print('EMPID, FIRSTNAME, LASTNAME, DOB, DEPARTMENT')
-                print(employee)
-        except Exception as e:
-            print('error while retrieve operation !!!')
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
+        usr_input = retrieve_input()
+        if usr_input == '1':
+            print('enter employeeID to retrieve : ')
+            empid = input('> ')
+            try:
+                cursor = conn.cursor()
+                cursor.execute(''' SELECT * FROM employee WHERE empid = ?''', (empid,))
+                employee = cursor.fetchone()
+                if employee is None:
+                    print('Record not found for employee with EmployeeID : {}'.format(empid))
+                else:
+                    print('EMPID, FIRSTNAME, LASTNAME, DOB, DEPARTMENT')
+                    print(employee)
+            except Exception as e:
+                print('error while retrieve operation !!!')
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
+        elif usr_input == '2':
+            print('enter firstName to retrieve : ')
+            fname = input('> ')
+            try:
+                cursor = conn.cursor()
+                cursor.execute(''' SELECT * FROM employee WHERE firstname = ?''', (fname,))
+                employee = cursor.fetchone()
+                if employee is None:
+                    print('Record not found for employee with Firstname : {}'.format(fname))
+                else:
+                    print('EMPID, FIRSTNAME, LASTNAME, DOB, DEPARTMENT')
+                    print(employee)
+            except Exception as e:
+                print('error while retrieve operation !!!')
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
+
+
+def retrieve_input():
+    """
+    validates user input required for retrieve operation
+    Returns:
+    user_input: validated user input
+    """
+    print('Enter 1 : To retrieve record with EmployeeID : ')
+    print('Enter 2 : To retrieve record with Firstname : ')
+    usr_input = input('> ')
+    if usr_input in ("", None) or usr_input.isspace():
+        print('re-enter valid input : ')
+        new_input = retrieve_input()
+        return new_input
+    else:
+        return usr_input
 
 
 def delete_record():
+    """
+    delete record operation
+    """
     if not os.path.isfile('testdb.sqlite'):
         print('OOPS...There are no records to retrieve. Please create records : ')
     else:
         conn = sqlite3.connect('testdb.sqlite')
-        print('enter employeeID to be DELETED : ')
+        print('enter employeeID to DELETE : ')
         empid = input('> ')
         try:
             cursor = conn.cursor()
             cursor.execute(''' DELETE FROM employee WHERE empid = ?''', (empid,))
             conn.commit()
             print('Successfully deleted employee with EmployeeID : {}'.format(empid))
+            f = open("log.txt", "a+")
+            try:
+                currenttime = datetime.datetime.now().strftime("%I:%M%p %B %d, %Y")
+                f.write(currenttime + ' : ' + 'Deleted record with EmployeeID -> {}'.format(empid)+' \n')
+            except Exception as e:
+                print('error while updating into log file !!!')
+                raise e
+            finally:
+                f.close()
         except Exception as e:
             print("error in delete operation !!!")
             conn.rollback()
@@ -340,10 +596,13 @@ def delete_record():
 
 
 def main():
-    print('Hi Welcome to Employee Database management!!!!')
-    print('Please input the operation you want to perform')
+    """
+    main execution function
+    """
+    welcome_message()
     employee_curd_operation()
 
 
 if __name__ == "__main__":
     main()
+
